@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
+import { Camera } from './Camera';
+import { PickImage } from './PickImage';
 interface ChatInputProps {
     onSend: (message: string) => void;
 }
@@ -22,6 +23,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend }) => {
             style={styles.container}
         >
             <View style={styles.inputContainer}>
+                <Camera />
+                <PickImage />
                 <TextInput
                     style={styles.input}
                     placeholder="Send a message..."
