@@ -34,8 +34,8 @@ def get_retriever(collection_name="durian_overview", k=4):
     retriever = vectordb.as_retriever(search_kwargs={"k": k})
     return retriever
 
-retriever = get_retriever()
-docs = retriever.invoke("ngừa bệnh thán thư trên cây sầu riêng")
+# retriever = get_retriever()
+# docs = retriever.invoke("ngừa bệnh thán thư trên cây sầu riêng")
 
 # for d in docs:
 #     print("-----")
