@@ -24,7 +24,7 @@ export default function HomeScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
-      text: 'Hello! I\'m your AI assistant. How can I help you today?',
+      text: 'Xin chào bạn, tôi là trợ lý AI. Tôi có thể giúp gì cho bạn?',
       isUser: false,
     },
   ]);

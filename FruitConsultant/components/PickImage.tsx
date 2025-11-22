@@ -3,6 +3,15 @@ import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from "expo-image-picker";
 
+type Sender = "user" | "bot" | "error";
+
+interface Message {
+    id: string;
+    sender: Sender;
+    text: string;
+    image?: string;
+    isPending?: boolean;
+}
 interface PendingImage {
     uri: string;
     file: {
@@ -13,8 +22,9 @@ interface PendingImage {
 }
 
 export const PickImage = () => {
-
-const handleImageUpload = async () => {
+    const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
+    const [inputMessage, setInputMessage] = useState("");
+    const handleImageUpload = async () => {
 
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
@@ -33,38 +43,23 @@ const handleImageUpload = async () => {
 
             if (!result.canceled && result.assets && result.assets.length > 0) {
                 const asset = result.assets[0];
-
-                // XỬ LÝ CHO ANDROID: Android đôi khi trả về fileName = null
-                // Chúng ta tự lấy tên file từ đường dẫn URI nếu cần
-                const uri = asset.uri;
-                const fileName = asset.fileName || uri.split('/').pop() || "image.jpg";
-
-                // Lấy đuôi file để đoán type nếu mimeType bị null
-                const match = /\.(\w+)$/.exec(fileName);
-                const type = asset.mimeType || (match ? `image/${match[1]}` : `image/jpeg`);
-
+                const imageUri = asset.uri;
                 const file = {
-                    uri: uri,
-                    name: fileName,
-                    type: type,
+                    uri: imageUri,
+                    name: asset.fileName || "image.jpg",
+                    type: asset.mimeType || "image/jpeg",
                 };
-                console.log("Ảnh đã chọn:", { uri, file });
 
-                // // Cập nhật state (giữ nguyên logic hiển thị của bạn)
-                // setPendingImage({ uri: uri, file });
+                setPendingImage({ uri: imageUri, file });
 
-                // const previewMsg: Message = {
-                //     id: generateUniqueId(), // Đảm bảo hàm này đã được import
-                //     sender: "user",
-                //     text: inputMessage.trim(), // Nếu user chưa nhập gì thì là chuỗi rỗng
-                //     image: uri,
-                //     isPending: true,
-                // };
-
-                // setMessages((prev) => [
-                //     ...prev.filter((msg) => !msg.isPending),
-                //     previewMsg,
-                // ]);
+                const previewMsg: Message = {
+                    // id: generateUniqueId(),
+                    id: 'd',
+                    sender: "user",
+                    text: inputMessage.trim(),
+                    image: imageUri,
+                    isPending: true,
+                };
             }
         } catch (error) {
             console.log("Lỗi chọn ảnh:", error);
@@ -77,21 +72,16 @@ const handleImageUpload = async () => {
                 style={[
                     styles.iconButton,
                     styles.imageButton,
-                    true && styles.imageButtonActive,
-                    true && styles.disabledButton,
-                    // hasPendingImage && styles.imageButtonActive,
+                    // pendingImage && styles.imageButtonActive,
                     // loading && styles.disabledButton,
                 ]}
                 onPress={handleImageUpload}
             // disabled={loading}
             >
                 <Ionicons
-                    name={true ? 'image' : 'image-outline'}
-                    size={22}
-                    color={true ? '#ffffff' : '#2563eb'}
-                // name={hasPendingImage ? 'image' : 'image-outline'}
-                // size={22}
-                // color={hasPendingImage ? '#ffffff' : '#2563eb'}
+                name={pendingImage ? 'image' : 'image-outline'}
+                size={22}
+                color={pendingImage ? '#ffffff' : '#ffffff'}
                 />
             </TouchableOpacity>
 
@@ -131,9 +121,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     imageButton: {
-        borderWidth: 1,
-        borderColor: '#2563eb',
-        backgroundColor: '#EEF2FF',
+        backgroundColor: '#19c37d',
     },
     imageButtonActive: {
         backgroundColor: '#2563eb',
