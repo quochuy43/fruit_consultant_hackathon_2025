@@ -1,2 +1,3 @@
 .env
 /chatbot/.venv/
+chatbot/utils/speech_to_text/whisper_base_durian

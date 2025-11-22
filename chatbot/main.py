@@ -13,6 +13,8 @@ import shutil
 # Import hàm vision của bạn
 from utils.computer_vision.cv_config import detect_disease_internal
 
+from utils.speech_to_text.asr_model import load_asr_model, speech_to_text
+
 load_dotenv()
 
 _cached_rag_chain = None
@@ -23,7 +25,14 @@ async def lifespan(app: FastAPI):
     global _cached_rag_chain
     _cached_rag_chain = get_rag_chain()
     print("🚀 RAG Chatbot server ready!")
+
+     # Load ASR model at startup
+    print("🔄 Loading Whisper model at startup...")
+    load_asr_model()
+    print("✅ ASR model loaded!")
+
     yield
+
     print("🛑 Closed RAG server")
 
 app = FastAPI(title="RAG Chatbot API", lifespan=lifespan)
@@ -117,3 +126,27 @@ async def chat_stream(
             "Access-Control-Allow-Origin": "*",
         }
     )
+
+@app.post("/asr")
+async def transcribe(audio: UploadFile):
+    # Tạo thư mục temp nếu chưa tồn tại
+    os.makedirs("temp", exist_ok=True)
+    
+    file_path = f"temp/{audio.filename}"
+    
+    try:
+        with open(file_path, "wb") as f:
+            f.write(await audio.read())
+
+        text = speech_to_text(file_path)
+        
+        # Cleanup file sau khi dùng
+        os.remove(file_path)
+        
+        return {"text": text}
+    
+    except Exception as e:
+        # Cleanup nếu lỗi
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")

@@ -23,4 +23,5 @@ dependencies = [
     "langchain-openai>=1.0.3",
     "scikit-learn==1.7.2",
     "ultralytics>=8.3.230",
+    "transformers>=4.57.1",
 ]
