@@ -1,337 +1,205 @@
-import React from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-    TextInput,
-    ScrollView,
-    Dimensions,
-} from 'react-native';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, {
-    useAnimatedStyle,
-    withTiming,
-    runOnJS,
-} from 'react-native-reanimated';
+import React, { useEffect } from 'react';
+import { Dimensions, ImageBackground, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { SharedValue } from 'react-native-reanimated';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemedText } from './themed-text';
+import { ThemedView } from './themed-view';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SIDEBAR_WIDTH = SCREEN_WIDTH * 0.80;
-
-interface Chat {
-    id: string;
-    title: string;
-    lastMessage: string;
-    timestamp: string;
-}
+const { width } = Dimensions.get('window');
+export const SIDEBAR_WIDTH = width * 0.7;
 
 interface SidebarProps {
-    visible: boolean;
-    onClose: () => void;
-    translateX: SharedValue<number>;
+  isOpen: boolean;
+  onClose: () => void;
+  offset: SharedValue<number>;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ visible, onClose, translateX }) => {
-    // Sample data
-    const [chats] = React.useState<Chat[]>([
-        {
-            id: '1',
-            title: 'Tư vấn sầu riêng',
-            lastMessage: 'Sầu riêng nào tốt nhất cho sức khỏe?',
-            timestamp: '10:30',
-        },
-        {
-            id: '2',
-            title: 'Chọn sầu riêng',
-            lastMessage: 'Cách chọn sầu riêng',
-            timestamp: 'Hôm qua',
-        },
-        {
-            id: '3',
-            title: 'Bảo quản sầu riêng',
-            lastMessage: 'Cách bảo quản sầu riêng',
-            timestamp: '2 ngày trước',
-        },
-    ]);
+export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
+  const backgroundColor = useThemeColor({}, 'background');
+  const borderColor = useThemeColor({}, 'border');
+  const textColor = useThemeColor({}, 'text');
 
-    // Swipe 
-    const panGesture = Gesture.Pan()
-        .onUpdate((event) => {
-            if (event.translationX < 0) {
-                const newValue = SIDEBAR_WIDTH + event.translationX;
-                translateX.value = Math.max(0, newValue);
-            }
-        })
-        .onEnd((event) => {
-            if (event.translationX < -SIDEBAR_WIDTH / 3 || event.velocityX < -500) {
-                translateX.value = withTiming(0, { duration: 250 });
-                runOnJS(onClose)();
-            } else {
-                translateX.value = withTiming(SIDEBAR_WIDTH, { duration: 200 });
-            }
-        });
+  useEffect(() => {
+    offset.value = withTiming(isOpen ? SIDEBAR_WIDTH : 0, { duration: 300 });
+  }, [isOpen]);
 
-    const sidebarAnimatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateX: translateX.value - SIDEBAR_WIDTH }],
-    }));
+  const panGesture = Gesture.Pan().onUpdate((event) => {
+    if (event.translationX < -50) runOnJS(onClose)();
+  });
 
-    if (!visible) return null;
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: offset.value - SIDEBAR_WIDTH }],
+  }));
 
-    return (
-        <GestureDetector gesture={panGesture}>
-            <Animated.View style={[styles.sidebar, sidebarAnimatedStyle]}>
-                {/* Search */}
-                <View style={styles.searchSection}>
-                    <View style={styles.searchContainer}>
-                        <Ionicons
-                            name="search"
-                            size={20}
-                            color="#8e8e93"
-                            style={styles.searchIcon}
-                        />
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Tìm kiếm cuộc trò chuyện..."
-                            placeholderTextColor="#8e8e93"
-                        />
-                    </View>
-                    <TouchableOpacity style={styles.newChatButton}>
-                        <Ionicons name="create-outline" size={24} color="#fff" />
-                    </TouchableOpacity>
-                </View>
+  return (
+    <GestureDetector gesture={panGesture}>
+      <Animated.View
+        style={[
+          styles.container,
+          animatedStyle,
+          { backgroundColor, borderRightColor: borderColor },
+        ]}
+      >
+        <SafeAreaView style={{ flex: 1 }}>
+          {/* Header */}
+          <ThemedView style={styles.header}>
+            <Ionicons name="person-circle-outline" size={36} color={textColor} />
+            <ThemedText style={styles.userName}>Durian Assistant</ThemedText>
+          </ThemedView>
 
-                {/* Chat List */}
-                <ScrollView
-                    style={styles.chatList}
-                    contentContainerStyle={styles.chatListContent}
-                    showsVerticalScrollIndicator={false}
-                >
-                    <Text style={styles.sectionTitle}>Cuộc trò chuyện</Text>
-                    {chats.map((chat) => (
-                        <TouchableOpacity
-                            key={chat.id}
-                            style={styles.chatItem}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.chatIconContainer}>
-                                <Ionicons
-                                    name="chatbubble-outline"
-                                    size={20}
-                                    color="#19c37d"
-                                />
-                            </View>
-                            <View style={styles.chatInfo}>
-                                <Text style={styles.chatTitle} numberOfLines={1}>
-                                    {chat.title}
-                                </Text>
-                                <Text
-                                    style={styles.chatLastMessage}
-                                    numberOfLines={1}
-                                >
-                                    {chat.lastMessage}
-                                </Text>
-                            </View>
-                            <Text style={styles.chatTimestamp}>{chat.timestamp}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
+          <ImageBackground
+            // source={require('@/assets/images/durian.png')}
+            resizeMode="contain"
+            style={styles.imageBackground}
+            imageStyle={{ opacity: 0.15, position: 'absolute', right: -50, top: 100, width: 300, height: 300 }}
+          >
+            <ScrollView style={styles.chatSamples}>
+              <SectionTitle title="Cuộc trò chuyện mẫu" />
+              <ChatSample text="Tác dụng của sầu riêng với sức khỏe 🍈" index={0} isOpen={isOpen} />
+              <ChatSample text="Sầu riêng nên bảo quản như thế nào?" index={1} isOpen={isOpen} />
+              <ChatSample text="Mẹo chọn sầu riêng ngon?" index={2} isOpen={isOpen} />
+              <ChatSample text="Phân biệt sầu riêng Ri6 và Monthong" index={3} isOpen={isOpen} />
+            </ScrollView>
+          </ImageBackground>
 
-                {/* Profile/Settings */}
-                <View style={styles.bottomSection}>
-                    <TouchableOpacity style={styles.bottomButton}>
-                        <Ionicons name="settings-outline" size={24} color="#2d333a" />
-                        <Text style={styles.bottomButtonText}>Cài đặt</Text>
-                    </TouchableOpacity>
+          {/* Menu dưới */}
+          <ThemedView style={styles.footer}>
+            <MenuItem icon="book-outline" label="Hướng dẫn" />
+            <MenuItem icon="settings-outline" label="Cài đặt" />
+            <MenuItem icon="help-circle-outline" label="Trợ giúp" />
+            <MenuItem icon="log-out-outline" label="Đăng xuất" />
+          </ThemedView>
+        </SafeAreaView>
+      </Animated.View>
+    </GestureDetector>
+  );
+}
 
-                    <View style={styles.divider} />
+function SectionTitle({ title }: { title: string }) {
+  const color = useThemeColor({}, 'text');
+  return <ThemedText style={[styles.sectionTitle, { color }]}>{title}</ThemedText>;
+}
 
-                    <TouchableOpacity style={styles.profileButton}>
-                        <View style={styles.profileAvatar}>
-                            <Ionicons name="person" size={24} color="#fff" />
-                        </View>
-                        <View style={styles.profileInfo}>
-                            <Text style={styles.profileName}>Sầu Riêng</Text>
-                            <Text style={styles.profileEmail}>saurieng@gmail.com</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color="#8e8e93" />
-                    </TouchableOpacity>
-                </View>
-            </Animated.View>
-        </GestureDetector>
-    );
-};
+function ChatSample({ text, index, isOpen }: { text: string; index: number; isOpen: boolean }) {
+  const color = useThemeColor({}, 'text');
+  const opacity = useSharedValue(0);
+  const translateX = useSharedValue(-20);
 
+  useEffect(() => {
+    if (isOpen) {
+      opacity.value = withDelay(index * 120, withTiming(1, { duration: 400 }));
+      translateX.value = withDelay(index * 120, withTiming(0, { duration: 400 }));
+    } else {
+      opacity.value = withTiming(0, { duration: 200 });
+      translateX.value = withTiming(-20, { duration: 200 });
+    }
+  }, [isOpen]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  return (
+    <Animated.View style={[{ opacity: 0, transform: [{ translateX: -20 }] }, animatedStyle]}>
+      <TouchableOpacity style={styles.chatSampleButton}>
+        <Ionicons name="chatbubble-ellipses-outline" size={20} color={color} />
+        <ThemedText style={styles.chatSampleText}>{text}</ThemedText>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+function MenuItem({ icon, label }: { icon: any; label: string }) {
+  const color = useThemeColor({}, 'text');
+  return (
+    <TouchableOpacity style={styles.menuItem}>
+      <Ionicons name={icon} size={22} color={color} />
+      <ThemedText style={styles.menuLabel}>{label}</ThemedText>
+    </TouchableOpacity>
+  );
+}
+
+// --- Styles ---
 const styles = StyleSheet.create({
-    sidebar: {
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: SIDEBAR_WIDTH,
-        backgroundColor: '#fff',
-        zIndex: 10,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 2,
-            height: 0,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    // Search Section 
-    searchSection: {
-        paddingTop: 50,
-        paddingHorizontal: 16,
-        paddingBottom: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e5e5ea',
-        backgroundColor: '#fff',
-    },
-    searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f2f2f7',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        marginBottom: 12,
-        height: 44,
-    },
-    searchIcon: {
-        marginRight: 8,
-    },
-    searchInput: {
-        flex: 1,
-        fontSize: 16,
-        color: '#2d333a',
-    },
-    newChatButton: {
-        backgroundColor: '#19c37d',
-        height: 48,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#19c37d',
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    // Chat List 
-    chatList: {
-        flex: 1,
-    },
-    chatListContent: {
-        paddingVertical: 16,
-    },
-    sectionTitle: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#8e8e93',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        paddingHorizontal: 16,
-        marginBottom: 12,
-    },
-    chatItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        marginHorizontal: 12,
-        marginBottom: 4,
-    },
-    chatIconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#f0fdf4',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    chatInfo: {
-        flex: 1,
-        marginRight: 8,
-    },
-    chatTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#2d333a',
-        marginBottom: 4,
-    },
-    chatLastMessage: {
-        fontSize: 14,
-        color: '#8e8e93',
-    },
-    chatTimestamp: {
-        fontSize: 12,
-        color: '#8e8e93',
-    },
-    // Profile/Settings
-    bottomSection: {
-        borderTopWidth: 1,
-        borderTopColor: '#e5e5ea',
-        backgroundColor: '#f9f9f9',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        paddingBottom: 24,
-    },
-    bottomButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 12,
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        marginBottom: 8,
-    },
-    bottomButtonText: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#2d333a',
-        marginLeft: 12,
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#e5e5ea',
-        marginVertical: 8,
-    },
-    profileButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 12,
-        backgroundColor: '#fff',
-        borderRadius: 12,
-    },
-    profileAvatar: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: '#19c37d',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    profileInfo: {
-        flex: 1,
-    },
-    profileName: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#2d333a',
-        marginBottom: 2,
-    },
-    profileEmail: {
-        fontSize: 14,
-        color: '#8e8e93',
-    },
+  container: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: SIDEBAR_WIDTH,
+    borderRightWidth: 1,
+    zIndex: 200,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(200,200,200,0.2)',
+  },
+  userName: {
+    fontSize: 17,
+    fontWeight: '600',
+    marginLeft: 10,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    opacity: 0.6,
+    marginBottom: 10,
+    marginLeft: 20,
+    marginTop: 8,
+  },
+  chatSamples: {
+    flex: 1,
+    marginTop: 8,
+  },
+  imageBackground: {
+    flex: 1,
+  },
+  chatSampleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  chatSampleText: {
+    marginLeft: 12,
+    fontSize: 15,
+    flexShrink: 1,
+  },
+  footer: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(200,200,200,0.2)',
+    paddingTop: 10,
+    paddingBottom: 30,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  menuLabel: {
+    fontSize: 16,
+    marginLeft: 14,
+    fontWeight: '500',
+  },
 });

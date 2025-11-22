@@ -1,177 +1,131 @@
-import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, StatusBar, TouchableOpacity, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Message } from '@/components/Message';
-import { ChatInput } from '@/components/ChatInput';
-import { Sidebar } from '@/components/Sidebar';
-import { useSidebar } from '@/hooks/useSidebar';
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
+import { FlatList, ImageBackground, Keyboard, KeyboardAvoidingView, NativeScrollEvent, NativeSyntheticEvent, Platform, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SIDEBAR_WIDTH = SCREEN_WIDTH * 0.80;
 
-interface ChatMessage {
-  id: string;
-  text: string;
-  isUser: boolean;
-}
+import ChatInput from "@/components/ChatInput";
+import MessageComponent from "@/components/Message"
+import Sidebar, { SIDEBAR_WIDTH } from "@/components/Sidebar";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+
+import { useThemeColor } from "@/hooks/use-theme-color";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { useChatLogic } from "@/hooks/useChatLogic";
 
 export default function HomeScreen() {
-  const { isOpen, openSidebar, closeSidebar } = useSidebar();
-  const translateX = useSharedValue(0);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      text: 'Xin chào bạn, tôi là trợ lý AI. Tôi có thể giúp gì cho bạn?',
-      isUser: false,
-    },
-  ]);
+  // Theme & Styles
+  const background = useThemeColor({}, "background");
+  const iconColor = useThemeColor({}, "text");
 
-  // Sync translateX with sidebar open/close
-  useEffect(() => {
-    if (isOpen) {
-      translateX.value = withTiming(SIDEBAR_WIDTH, { duration: 300 });
-    } else {
-      translateX.value = withTiming(0, { duration: 250 });
-    }
-  }, [isOpen]);
-
-  const handleSend = (text: string) => {
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      text,
-      isUser: true,
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        text: 'This is a sample response. Your AI integration will go here!',
-        isUser: false,
-      };
-      setMessages((prev) => [...prev, aiResponse]);
-    }, 1000);
+  // Sidebar Logic
+  const sidebarOffset = useSharedValue(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const toggleSidebar = (open: boolean) => {
+    setIsSidebarOpen(open);
+    sidebarOffset.value = withTiming(open ? SIDEBAR_WIDTH : 0, { duration: 250 });
   };
 
-  // Edge swipe gesture to open sidebar
-  const edgeSwipeGesture = Gesture.Pan()
-    .activeOffsetX([0, 30])
-    .onUpdate((event) => {
-      if (event.translationX > 50 && event.x < 50 && !isOpen) {
-        // Swipe from left edge
-        openSidebar();
-      }
-    });
+  // Business Logic Hooks
+  const chat = useChatLogic();
+  const audio = useAudioRecorder((text) => chat.setInputMessage(text));
+  // chat: Chứa tất cả state tin nhắn, input, ảnh, và các hàm sendMessage, pickMedia.
+  // audio: Chứa state ghi âm và các hàm startRecording, stopRecording.
+  // Nối 2 Hooks: Khi useAudioRecorder nhận được văn bản từ Back-end ((text) => ...), nó lập tức gọi hàm chat.setInputMessage(text) để đưa văn bản đó vào ô nhập liệu chính của Hook useChatLogic. Đây là một ví dụ tuyệt vời về sự tương tác giữa các Hooks.
 
-  // Animated style for main content
-  const mainContentAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
+  // Scroll handling UI specific
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const atBottom = contentSize.height - contentOffset.y - layoutMeasurement.height <= 50;
+    chat.setIsScrolledToBottom(atBottom);
+    if (chat.loading && !atBottom) chat.setUserInteracted(true);
+  };
 
-  // Animated style for overlay
-  const overlayAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: translateX.value / SIDEBAR_WIDTH * 0.3,
-  }));
+  // Animations
+  const mainAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ translateX: sidebarOffset.value }] }));
+  const overlayAnimatedStyle = useAnimatedStyle(() => ({ opacity: (sidebarOffset.value / SIDEBAR_WIDTH) * 0.3, display: sidebarOffset.value > 0 ? "flex" : "none" }));
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: background }} edges={["top", "left", "right", "bottom"]}>
+        <Sidebar isOpen={isSidebarOpen} onClose={() => toggleSidebar(false)} offset={sidebarOffset} />
 
-      {/* Sidebar */}
-      <Sidebar visible={isOpen} onClose={closeSidebar} translateX={translateX} />
+        <Animated.View style={[{ flex: 1 }, mainAnimatedStyle]}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 45 : 0} style={styles.flex1}>
 
-      {/* Main Content */}
-      <GestureDetector gesture={edgeSwipeGesture}>
-        <Animated.View style={[styles.mainContent, mainContentAnimatedStyle]}>
-          <SafeAreaView style={styles.safeArea}>
+              {/* Header */}
+              <ThemedView style={styles.header}>
+                <TouchableOpacity onPress={() => toggleSidebar(true)}>
+                  <Ionicons name="menu" size={28} color={iconColor} />
+                </TouchableOpacity>
+                <ThemedText style={styles.headerTitle}>Durian Consultant</ThemedText>
+              </ThemedView>
 
-            <View style={styles.header}>
-              <TouchableOpacity onPress={openSidebar} style={styles.menuButton}>
-                <Ionicons name="menu" size={28} color="#2d333a" />
-              </TouchableOpacity>
-            </View>
+              {/* Chat Body */}
+              <View style={styles.chatContainer}>
+                <ImageBackground source={require("@/assets/images/durian.png")} resizeMode="contain" style={styles.bgImage} imageStyle={styles.bgImageStyle} />
 
-            <KeyboardAvoidingView
-              style={styles.content}
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
-            >
-              <ScrollView
-                style={styles.messagesContainer}
-                contentContainerStyle={styles.messagesContent}
-              >
-                {messages.map((message) => (
-                  <Message
-                    key={message.id}
-                    text={message.text}
-                    isUser={message.isUser}
-                  />
-                ))}
-              </ScrollView>
-              <ChatInput onSend={handleSend} />
+                <FlatList
+                  ref={chat.flatListRef}
+                  data={chat.messages}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => <MessageComponent message={item} />}
+                  contentContainerStyle={styles.listContent}
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
+                  showsVerticalScrollIndicator={false}
+                  keyboardDismissMode="on-drag"
+                  // --- CÁC DÒNG THÊM ĐỂ TỐI ƯU ---
+                  removeClippedSubviews={true} // Cực quan trọng: Ẩn các item đã cuộn khỏi màn hình để giải phóng RAM (Android cực cần)
+                  initialNumToRender={10}      // Chỉ render 10 tin nhắn đầu tiên khi mới mở
+                  maxToRenderPerBatch={5}      // Render thêm 5 tin mỗi khi cuộn
+                  windowSize={10}              // Giảm vùng nhớ đệm (mặc định là 21, giảm xuống 10 cho nhẹ)
+                  updateCellsBatchingPeriod={50} // Thời gian chờ giữa các lần render batch
+                />
+              </View>
+
+              {/* Chat Input */}
+              <ChatInput
+                message={chat.inputMessage}
+                setMessage={chat.setInputMessage}
+                onSend={() => chat.sendMessage()}
+                onPickImage={() => chat.pickMedia(false)}
+                onPickCamera={() => chat.pickMedia(true)}
+                audio={{
+                  isRecording: Boolean(audio.recording),
+                  seconds: audio.seconds,
+                  start: audio.startRecording,
+                  stop: audio.stopRecording
+                }}
+                loading={chat.loading || audio.isProcessing}
+                hasPendingImage={Boolean(chat.pendingImage)}
+              />
+              {/* Tất cả các hàm và state từ 2 Hooks (chat và audio) đều được truyền xuống Component ChatInput qua các props đã được định nghĩa.
+
+              loading tổng hợp: loading={chat.loading || audio.isProcessing} đảm bảo rằng giao diện bị vô hiệu hóa khi Bot đang trả lời HOẶC âm thanh đang được xử lý (ASR). */}
             </KeyboardAvoidingView>
-          </SafeAreaView>
-
-          {/* Overlay */}
-          {isOpen && (
-            <TouchableOpacity
-              style={styles.overlay}
-              activeOpacity={1}
-              onPress={closeSidebar}
-            >
-              <Animated.View style={[styles.overlayBackground, overlayAnimatedStyle]} />
-            </TouchableOpacity>
-          )}
+          </TouchableWithoutFeedback>
         </Animated.View>
-      </GestureDetector>
-    </View>
+
+        <Animated.View style={[styles.overlay, overlayAnimatedStyle]}>
+          <TouchableWithoutFeedback onPress={() => toggleSidebar(false)}><View style={styles.flex1} /></TouchableWithoutFeedback>
+        </Animated.View>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  mainContent: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  safeArea: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    // borderBottomWidth: 1,
-    // borderBottomColor: '#e5e5ea',
-    backgroundColor: '#fff',
-  },
-  menuButton: {
-    padding: 4,
-  },
-  content: {
-    flex: 1,
-  },
-  messagesContainer: {
-    flex: 1,
-  },
-  messagesContent: {
-    flexGrow: 1,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 5,
-  },
-  overlayBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
-  },
+  flex1: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", paddingVertical: 16, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: "#E5E5E5" },
+  headerTitle: { fontSize: 20, fontWeight: "bold", flex: 1, textAlign: "center" },
+  chatContainer: { flex: 1, justifyContent: "flex-start" },
+  listContent: { padding: 16, paddingBottom: 20 },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,1)", zIndex: 150 },
+  bgImage: { position: "absolute", top: "50%", left: "50%", transform: [{ translateX: -150 }, { translateY: -150 }], width: 300, height: 300, opacity: 0.2, zIndex: 0 },
+  bgImageStyle: { width: "100%", height: "100%" },
 });
