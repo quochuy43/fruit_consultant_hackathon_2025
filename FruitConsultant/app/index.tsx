@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity, Dimensions } from 'react-native';
+import { View, ScrollView, StyleSheet, StatusBar, TouchableOpacity, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Message } from '@/components/Message';
 import { ChatInput } from '@/components/ChatInput';
 import { Sidebar } from '@/components/Sidebar';
@@ -59,7 +60,7 @@ export default function HomeScreen() {
 
   // Edge swipe gesture to open sidebar
   const edgeSwipeGesture = Gesture.Pan()
-    .activeOffsetX([0, 30]) 
+    .activeOffsetX([0, 30])
     .onUpdate((event) => {
       if (event.translationX > 50 && event.x < 50 && !isOpen) {
         // Swipe from left edge
@@ -95,7 +96,11 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.content}>
+            <KeyboardAvoidingView
+              style={styles.content}
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
+            >
               <ScrollView
                 style={styles.messagesContainer}
                 contentContainerStyle={styles.messagesContent}
@@ -109,7 +114,7 @@ export default function HomeScreen() {
                 ))}
               </ScrollView>
               <ChatInput onSend={handleSend} />
-            </View>
+            </KeyboardAvoidingView>
           </SafeAreaView>
 
           {/* Overlay */}
@@ -145,8 +150,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5ea',
+    // borderBottomWidth: 1,
+    // borderBottomColor: '#e5e5ea',
     backgroundColor: '#fff',
   },
   menuButton: {
