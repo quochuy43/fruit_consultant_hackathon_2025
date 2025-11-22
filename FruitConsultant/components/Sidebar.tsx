@@ -54,11 +54,11 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
           {/* Header */}
           <ThemedView style={styles.header}>
             <Ionicons name="person-circle-outline" size={36} color={textColor} />
-            <ThemedText style={styles.userName}>Durian Consultant</ThemedText>
+            <ThemedText style={styles.userName}>Durian Assistant</ThemedText>
           </ThemedView>
 
           <ImageBackground
-            source={require('@/assets/images/durian.png')}
+            // source={require('@/assets/images/durian.png')}
             resizeMode="contain"
             style={styles.imageBackground}
             imageStyle={{ opacity: 0.15, position: 'absolute', right: -50, top: 100, width: 300, height: 300 }}

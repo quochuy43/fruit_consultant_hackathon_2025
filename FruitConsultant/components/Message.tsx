@@ -18,7 +18,7 @@ const getMarkdownStyles = (textColor: string, tintColor: string, borderColor: st
 const BotHeader = ({ tintColor }: { tintColor: string }) => (
   <View style={styles.botHeader}>
     <Ionicons name="sparkles" size={16} color={tintColor} style={{ marginRight: 6 }} />
-    <ThemedText style={styles.botName}>Durian Consultant</ThemedText>
+    <ThemedText style={styles.botName}>Durian Assistant</ThemedText>
   </View>
 );
 

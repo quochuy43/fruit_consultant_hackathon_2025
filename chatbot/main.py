@@ -74,7 +74,7 @@ async def chat_stream(
             vision_result = detect_disease_internal(temp_image_path)
             
             # Nối kết quả vision vào nội dung tin nhắn
-            vision_info = f" {vision_result['label_vi']} trên cây sầu riêng"
+            vision_info = f" {vision_result['label_vi']} trên cây sầu riêng (Được dự đoán từ model yolov11 với độ tin cậy {vision_result['confidence']}%)."
             final_content = message + vision_info
             
         except Exception as e:
