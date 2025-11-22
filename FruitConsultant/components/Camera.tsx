@@ -3,6 +3,14 @@ import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from "expo-image-picker";
 
+type Sender = "user" | "bot" | "error";
+interface Message {
+    id: string;
+    sender: Sender;
+    text: string;
+    image?: string;
+    isPending?: boolean;
+}
 interface PendingImage {
     uri: string;
     file: {
@@ -13,10 +21,8 @@ interface PendingImage {
 }
 
 export const Camera = () => {
-
-
-
-
+    const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
+    const [inputMessage, setInputMessage] = useState("");
 
     const handleImageCapture = async () => {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -40,21 +46,17 @@ export const Camera = () => {
                 name: asset.fileName || "photo.jpg",
                 type: asset.mimeType || "image/jpeg",
             };
-            console.log("Captured image file:", file);
-            // setPendingImage({ uri: imageUri, file });
+            console.log('Captured image URI:', imageUri)
+            setPendingImage({ uri: imageUri, file });
 
-            // const previewMsg: Message = {
-            //     id: generateUniqueId(),
-            //     sender: "user",
-            //     text: inputMessage.trim(),
-            //     image: imageUri,
-            //     isPending: true,
-            // };
+            const previewMsg: Message = {
+                id: "haha",
+                sender: "user",
+                text: inputMessage.trim(),
+                image: imageUri,
+                isPending: true,
+            };
 
-            // setMessages((prev) => [
-            //     ...prev.filter((msg) => !msg.isPending),
-            //     previewMsg,
-            // ]);
         }
     };
     return (
@@ -63,21 +65,21 @@ export const Camera = () => {
                 style={[
                     styles.iconButton,
                     styles.imageButton,
-                    true && styles.imageButtonActive,
-                    true && styles.disabledButton,
-                    // hasPendingImage && styles.imageButtonActive,
-                    // loading && styles.disabledButton,
+                    // true && styles.disabledButton,
+                    // pendingImage && styles.imageButtonActive,
+                    // true && styles.disabledButton,
                 ]}
                 onPress={handleImageCapture}
-            // disabled={loading}
+            // disabled={true}
             >
                 <Ionicons
+
+                    // name={pendingImage ? 'camera' : 'camera-outline'}
+                    // size={22}
+                    // color={pendingImage ? '#ffffff' : '#2563eb'}
                     name={true ? 'camera' : 'camera-outline'}
                     size={22}
-                    color={true ? '#ffffff' : '#2563eb'}
-                // name={hasPendingImage ? 'image' : 'image-outline'}
-                // size={22}
-                // color={hasPendingImage ? '#ffffff' : '#2563eb'}
+                    color={true ? '#ffffff' : '#ffffff'}
                 />
             </TouchableOpacity>
         </>
@@ -116,9 +118,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     imageButton: {
-        borderWidth: 1,
-        borderColor: '#2563eb',
-        backgroundColor: '#EEF2FF',
+    
+        backgroundColor: '#19c37d',
     },
     imageButtonActive: {
         backgroundColor: '#2563eb',
