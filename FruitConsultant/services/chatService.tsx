@@ -1,4 +1,4 @@
-const API_URL = "https://88b23e065f11.ngrok-free.app"; // Nên đưa vào env config
+const API_URL = "https://7e1755fe15e1.ngrok-free.app"; // Nên đưa vào env config
 
 export const ChatService = {
     async uploadAudio(uri: string) {
